@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import socket
-import time
+from multiprocessing import Process
 
 #Global vars
 HOST = ""
@@ -9,9 +9,17 @@ BUFFER_SIZE = 1024
 
 # Use to test echo "abcd" | nc localhost 8001 -q 1
 
+def handle_request_echo(addr, conn):
+    print("Connected by", addr)
+    #Recieve data
+    full_data = conn.recv(BUFFER_SIZE)
+    #Send the data back
+    conn.sendall(full_data)
+    conn.close()
+
 def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    
+        print("Starting multi echo server #Q8 Mod")
         #QUESTION 3 - Reuse same bind port
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         
@@ -26,13 +34,18 @@ def main():
             conn, addr = s.accept()
             print("Connected by", addr)
             
-            #Recieve data
-            full_data = conn.recv(BUFFER_SIZE)
-            #Wait a bit 
-            time.sleep(0.5)
-            #Send the data back
-            conn.sendall(full_data)
-            conn.close()
+            # Proxy server fork so multiple programs can use
+            # Referenced: https://stackoverflow.com/questions/24041935/difference-in-behavior-between-os-fork-and-multiprocessing-process
+            # How to use Process 
+            # Part #8 of lab
+            p = Process(target=handle_request_echo, args=(addr, conn))
+            p.daemon = True
+            p.start()
+            print("Child process started", p)
+            
+            
+            
+            
 
 if __name__ == "__main__":
     main()
